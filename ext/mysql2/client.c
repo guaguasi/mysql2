@@ -30,7 +30,11 @@ VALUE rb_hash_dup(VALUE other) {
     rb_raise(cMysql2Error, "MySQL client is not initialized"); \
   }
 
-#define CONNECTED(wrapper) (wrapper->client->net.vio != NULL && wrapper->client->net.fd != -1)
+#if defined(MARIADB_VERSION_ID) && MARIADB_VERSION_ID > 100200
+  #define CONNECTED(wrapper) (wrapper->client->net.pvio != NULL && wrapper->client->net.fd != -1)
+#else
+  #define CONNECTED(wrapper) (wrapper->client->net.vio != NULL && wrapper->client->net.fd != -1)
+#endif
 
 #define REQUIRE_CONNECTED(wrapper) \
   REQUIRE_INITIALIZED(wrapper) \
@@ -51,6 +55,8 @@ VALUE rb_hash_dup(VALUE other) {
  */
 #ifdef LIBMYSQL_VERSION
   #define MYSQL_LINK_VERSION LIBMYSQL_VERSION
+#elif defined(MARIADB_VERSION_ID) && MARIADB_VERSION_ID > 100200
+  #define MYSQL_LINK_VERSION MARIADB_CLIENT_VERSION_STR
 #else
   #define MYSQL_LINK_VERSION MYSQL_SERVER_VERSION
 #endif
@@ -1444,6 +1450,9 @@ void init_mysql2_client() {
 #ifdef CLIENT_LONG_PASSWORD
   rb_const_set(cMysql2Client, rb_intern("LONG_PASSWORD"),
       LONG2NUM(CLIENT_LONG_PASSWORD));
+#elif defined(MARIADB_VERSION_ID) && MARIADB_VERSION_ID > 100200
+  rb_const_set(cMysql2Client, rb_intern("LONG_PASSWORD"),
+      LONG2NUM(0));
 #endif
 
 #ifdef CLIENT_FOUND_ROWS
